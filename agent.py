@@ -1,5 +1,6 @@
 # agent.py
 import random
+import math
 from collections import deque
 import heapq
 from typing import Tuple, List, Set, Dict
@@ -25,8 +26,8 @@ class SearchAgent:
     """
 
     DELTAS = {
-        'Up': (0, -1),
-        'Down': (0, 1),
+        'Up': (0, 1),
+        'Down': (0, -1),
         'Left': (-1, 0),
         'Right': (1, 0),
     }
@@ -34,6 +35,42 @@ class SearchAgent:
     def __init__(self):
         self.plan: List[str] = []
         self.active_algo: str = 'BFS'  # change to 'DFS' or 'UCS' to observe differences
+
+    def manhattan_distance(self, pos, goal):
+        return abs(pos[0] - goal[0]) + abs(pos[1] - goal[1])
+
+    def euclidean_distance(self, pos, goal):
+        return math.sqrt((pos[0] - goal[0]) ** 2 + (pos[1] - goal[1]) ** 2)
+
+    def astar_search(self, start_pos, goal_pos, walls, grid_size, heuristic_type='manhattan'):
+        heuristic = (self.euclidean_distance
+                     if heuristic_type == 'euclidean'
+                     else self.manhattan_distance)
+        priority_queue = []
+        reached_states = set()
+        initial_h_cost = heuristic(start_pos, goal_pos)
+        heapq.heappush(priority_queue, (initial_h_cost, 0, start_pos, []))
+
+        while priority_queue:
+            f_cost, g_cost, current_pos, path_taken = heapq.heappop(priority_queue)
+            if current_pos == goal_pos:
+                return path_taken
+            if current_pos in reached_states:
+                continue
+            reached_states.add(current_pos)
+
+            for neighbor_pos, action in self._neighbors(current_pos, walls, grid_size):
+                if neighbor_pos in reached_states:
+                    continue
+                new_g_cost = g_cost + 1
+                new_h_cost = heuristic(neighbor_pos, goal_pos)
+                new_f_cost = new_g_cost + new_h_cost
+                new_path = path_taken + [action]
+                heapq.heappush(
+                    priority_queue,
+                    (new_f_cost, new_g_cost, neighbor_pos, new_path),
+                )
+        return []
 
     def sense_and_act(self, percept: dict) -> str:
         # If we already have a plan, execute the next action
@@ -60,6 +97,8 @@ class SearchAgent:
             plan = self._dfs(start, goal, walls, grid_size)
         elif self.active_algo == 'UCS':
             plan = self._ucs(start, goal, walls, grid_size)
+        elif self.active_algo == 'AStar':
+            plan = self.astar_search(start, goal, walls, grid_size)
         else:
             plan = []
 
@@ -152,3 +191,10 @@ class SearchAgent:
 # Observation:
 # Change SearchAgent().active_algo between 'BFS', 'DFS', and 'UCS' and run the simulation.
 # DFS will often produce winding, erratic paths; BFS and UCS give direct/optimal paths on an unweighted grid.
+
+if __name__ == '__main__':
+    search_agent = SearchAgent()
+    start = (0, 0)
+    goal = (3, 4)
+    print(search_agent.manhattan_distance(start, goal))
+    print(search_agent.euclidean_distance(start, goal))

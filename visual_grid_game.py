@@ -2,6 +2,7 @@
 import random
 import tkinter as tk
 from collections import deque
+from agent import SearchAgent
 
 class VisualGridHuntGame:
     """A flexible Pacman-style grid environment with support for configurable opponents and larger scales."""
@@ -184,6 +185,8 @@ class GridGameGUI:
         self.root = root
         self.root.title("IT3012 - Scalable Multi-Agent Grid Hunt")
         self.env = VisualGridHuntGame(width=width, height=height, num_food=num_food, num_opponents=num_opponents, custom_walls=walls)
+        self.agent = SearchAgent()
+        self.agent.active_algo = 'AStar'
         
         # Dynamically calculate cell size so the total canvas fits nicely within a 600x600 window ceiling
         max_canvas_dim = 600
@@ -259,7 +262,7 @@ class GridGameGUI:
         
         def step():
             if not self.env.is_done():
-                action = self.env.find_next_action()
+                action = self.agent.sense_and_act(self.env.get_percept())
                 self.env.execute_action(action)
                 self.draw_grid()
                 self.label.config(text=f"Score: {self.env.score} | Steps: {self.env.steps} | Food Left: {len(self.env.food_positions)}")
